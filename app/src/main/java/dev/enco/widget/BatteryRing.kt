@@ -6,8 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffColorFilter
 import android.graphics.Rect
 import android.graphics.RectF
 import androidx.core.content.ContextCompat
@@ -122,9 +120,19 @@ internal object BatteryRing {
         val drawnHeight = height * scale
         val left = cx - drawnWidth / 2f
         val top = cy - drawnHeight / 2f
-        drawable.colorFilter = PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN)
         drawable.setBounds(left.toInt(), top.toInt(), (left + drawnWidth).toInt(), (top + drawnHeight).toInt())
         drawable.draw(canvas)
+        val marker = when (part) {
+            WidgetPart.LEFT -> "L" to 35f
+            WidgetPart.RIGHT -> "R" to 65f
+            else -> return
+        }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        paint.color = 0xFFA0A0A0.toInt()
+        paint.textAlign = Paint.Align.CENTER
+        paint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.SANS_SERIF, android.graphics.Typeface.BOLD)
+        paint.textSize = 9f * drawnHeight / 120f
+        canvas.drawText(marker.first, left + marker.second * drawnWidth / 100f, top + 60f * drawnHeight / 120f, paint)
     }
 
     private fun drawPhoneGlyph(canvas: Canvas, cx: Float, cy: Float, size: Float, color: Int) {

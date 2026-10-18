@@ -1,0 +1,47 @@
+<svg xmlns="http://w3.org" viewBox="0 0 100 120" width="100%" height="100%">
+  <defs>
+    <!-- Matte body gradient -->
+    <linearGradient id="bodyGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#F2F2F2"/>
+      <stop offset="85%" stop-color="#D6D6D6"/>
+      <stop offset="100%" stop-color="#B5B5B5"/>
+    </linearGradient>
+    <!-- Glossy touch panel gradient -->
+    <linearGradient id="touchGradL" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#EAEAEA"/>
+      <stop offset="100%" stop-color="#CCCCCC"/>
+    </linearGradient>
+    <!-- Silicone tip depth -->
+    <radialGradient id="tipGradL" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E0E0E0"/>
+      <stop offset="70%" stop-color="#B8B8B8"/>
+      <stop offset="100%" stop-color="#8E8E8E"/>
+    </radialGradient>
+    <!-- Drop shadow for the inner structure -->
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="2" dy="3" stdDeviation="2" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Left Earbud Main Body -->
+  <path d="M70,30 C60,15 35,20 25,40 C15,60 20,80 35,90 C50,100 75,95 80,75 C85,55 80,45 70,30 Z" fill="url(#bodyGradL)" stroke="#3A3A3A" stroke-width="2.5" filter="url(#shadow)" stroke-linejoin="round"/>
+  
+  <!-- Glossy Outer Touch Accent Zone -->
+  <path d="M50,38 C45,28 35,32 30,45 C25,58 28,70 38,75 C48,80 58,72 60,60 C62,48 55,48 50,38 Z" fill="url(#touchGradL)" stroke="#BEBEBE" stroke-width="1"/>
+  
+  <!-- Subtle Highlight on Touch Panel Rim -->
+  <path d="M32,42 C30,48 31,58 36,68" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+  
+  <!-- Silicone Tip (Facing angled inward) -->
+  <ellipse cx="69" cy="65" rx="14" ry="18" transform="rotate(-25, 69, 65)" fill="url(#tipGradL)" stroke="#5A5A5A" stroke-width="1.5"/>
+  <ellipse cx="69" cy="65" rx="5" ry="7" transform="rotate(-25, 69, 65)" fill="#444444"/>
+  
+  <!-- Metallic Charging Contacts -->
+  <circle cx="42" cy="85" r="2.5" fill="#FFD700" stroke="#B8860B" stroke-width="0.5"/>
+  <circle cx="50" cy="87" r="2.5" fill="#FFD700" stroke="#B8860B" stroke-width="0.5"/>
+  
+  <!-- Left Marker -->
+  <text x="35" y="60" font-family="Arial, sans-serif" font-size="9" font-weight="bold" fill="#A0A0A0" text-anchor="middle">L</text>
+</svg>

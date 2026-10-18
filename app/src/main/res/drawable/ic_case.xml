@@ -48,7 +48,7 @@
         android:strokeColor="#4A4A4A" />
 
     <path
-        android:pathData="M75,55 Q90,64 105,55 Q90,57 75,55 Z"
+        android:pathData="M75,58 Q90,64 105,58 Q90,57 75,58 Z"
         android:strokeWidth="0.5"
         android:strokeColor="#999999"
         android:fillColor="#D0D0D0" />
