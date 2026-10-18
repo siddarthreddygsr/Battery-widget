@@ -7,7 +7,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
-import android.graphics.RectF
 import android.graphics.drawable.BitmapDrawable
 import android.util.Log
 import kotlin.math.max
@@ -16,73 +15,58 @@ internal object GlassPlate {
     private const val TAG = "Enco"
     private var cacheKey = 0
     private var cache: Bitmap? = null
+    private var hadWallpaper = false
 
     fun create(context: Context, widthDp: Int, heightDp: Int, night: Boolean): Bitmap {
         val density = context.resources.displayMetrics.density
-        val width = (widthDp * density).toInt().coerceIn(48, 1400)
-        val height = (heightDp * density).toInt().coerceIn(48, 1400)
+        var width = (widthDp * density).toInt().coerceAtLeast(48)
+        var height = (heightDp * density).toInt().coerceAtLeast(48)
+        if (width > 180) {
+            height = (height * 180f / width).toInt().coerceAtLeast(32)
+            width = 180
+        }
         val wallpaperId = runCatching {
             WallpaperManager.getInstance(context).getWallpaperId(WallpaperManager.FLAG_SYSTEM)
         }.getOrDefault(-1)
-        val key = wallpaperId * 31 + width * 17 + height * 13 + if (night) 1 else 0
+        val key = wallpaperId * 31 + width * 17 + height * 13 + (if (night) 1 else 0) + 9
         cache?.let { if (key == cacheKey && !it.isRecycled) return it }
-        val plate = draw(context, width, height, density, night)
-        cache = plate
-        cacheKey = key
+        val plate = draw(context, width, height, night)
+        if (hadWallpaper) {
+            cache = plate
+            cacheKey = key
+        }
         return plate
     }
 
-    private fun draw(context: Context, width: Int, height: Int, density: Float, night: Boolean): Bitmap {
+    private fun draw(context: Context, width: Int, height: Int, night: Boolean): Bitmap {
         val plate = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(plate)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        val radius = 28f * density
-        val bounds = RectF(0f, 0f, width.toFloat(), height.toFloat())
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         val wallpaper = blurredWallpaper(context, width, height)
+        hadWallpaper = wallpaper != null
         if (wallpaper != null) {
-            val shaderScaleX = width.toFloat() / wallpaper.width
-            val shaderScaleY = height.toFloat() / wallpaper.height
-            canvas.save()
-            canvas.scale(shaderScaleX, shaderScaleY)
-            canvas.drawBitmap(wallpaper, 0f, 0f, paint)
-            canvas.restore()
+            canvas.drawBitmap(wallpaper, null, Rect(0, 0, width, height), paint)
             wallpaper.recycle()
         } else {
-            paint.color = if (night) 0xCC1A1C22.toInt() else 0xCCF4F4F6.toInt()
-            canvas.drawRoundRect(bounds, radius, radius, paint)
+            paint.color = if (night) 0xFF1A1C22.toInt() else 0xFFF4F4F6.toInt()
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
         }
-        paint.color = if (night) 0x33000000 else 0x38FFFFFF
-        canvas.drawRect(bounds, paint)
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = density
-        paint.color = if (night) 0x66FFFFFF else 0xCCFFFFFF.toInt()
-        canvas.drawRoundRect(bounds, radius, radius, paint)
-        val rounded = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val mask = Canvas(rounded)
-        val clear = Paint(Paint.ANTI_ALIAS_FLAG)
-        clear.color = 0xFFFFFFFF.toInt()
-        mask.drawRoundRect(bounds, radius, radius, clear)
-        clear.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
-        mask.drawBitmap(plate, 0f, 0f, clear)
-        plate.recycle()
-        return rounded
+        paint.color = if (night) 0x22000000 else 0x44FFFFFF
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+        return plate
     }
 
     private fun blurredWallpaper(context: Context, width: Int, height: Int): Bitmap? {
         val source = loadWallpaper(context) ?: return null
-        val sampleWidth = 96
-        val sampleHeight = max(28, sampleWidth * height / width)
+        val sampleWidth = 72
+        val sampleHeight = max(24, sampleWidth * height / width)
         val sample = Bitmap.createBitmap(sampleWidth, sampleHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(sample)
-        val scale = max(sampleWidth.toFloat() / source.width, sampleHeight.toFloat() / source.height)
-        val drawnWidth = source.width * scale
-        val drawnHeight = source.height * scale
-        val left = ((sampleWidth - drawnWidth) / 2f).toInt()
-        val top = ((sampleHeight - drawnHeight) / 2f).toInt()
+        val bandTop = (source.height * 0.70f).toInt().coerceIn(0, source.height - 2)
         canvas.drawBitmap(
             source,
-            Rect(0, 0, source.width, source.height),
-            Rect(left, top, left + drawnWidth.toInt(), top + drawnHeight.toInt()),
+            Rect(0, bandTop, source.width, source.height),
+            Rect(0, 0, sampleWidth, sampleHeight),
             Paint(Paint.FILTER_BITMAP_FLAG),
         )
         val pixel = sample.getPixel(sampleWidth / 2, sampleHeight / 2)
@@ -91,7 +75,8 @@ internal object GlassPlate {
             sample.recycle()
             return null
         }
-        return boxBlur(sample, 10)
+        Log.i(TAG, "wallpaper sample ${Integer.toHexString(pixel)}")
+        return boxBlur(sample, 4)
     }
 
     private fun loadWallpaper(context: Context): Bitmap? {
@@ -120,7 +105,7 @@ internal object GlassPlate {
             Log.w(TAG, "no wallpaper bitmap")
             return null
         }
-        Log.i(TAG, "wallpaper ${raw.width}x${raw.height}")
+        Log.i(TAG, "wallpaper ${raw.width}x${raw.height} from ${if (fromFile != null) "file" else "drawable"}")
         if (raw.config == Bitmap.Config.ARGB_8888) return raw
         val copy = raw.copy(Bitmap.Config.ARGB_8888, false)
         if (copy !== raw) raw.recycle()
@@ -133,10 +118,10 @@ internal object GlassPlate {
         val pixels = IntArray(width * height)
         source.getPixels(pixels, 0, width, 0, 0, width, height)
         val next = IntArray(pixels.size)
-        blur(pixels, next, width, height, radius, horizontal = true)
-        blur(next, pixels, width, height, radius, horizontal = false)
-        blur(pixels, next, width, height, radius, horizontal = true)
-        blur(next, pixels, width, height, radius, horizontal = false)
+        repeat(2) {
+            blur(pixels, next, width, height, radius, horizontal = true)
+            blur(next, pixels, width, height, radius, horizontal = false)
+        }
         source.setPixels(pixels, 0, width, 0, 0, width, height)
         return source
     }

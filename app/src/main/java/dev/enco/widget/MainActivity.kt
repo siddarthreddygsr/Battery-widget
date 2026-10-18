@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             binding.statusText.text = getString(R.string.permission_needed)
         }
+        if (hasWallpaperPermission()) EncoWidgetProvider.render(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -108,7 +109,9 @@ class MainActivity : AppCompatActivity() {
         binding.appearanceGroup.setOnCheckedChangeListener(null)
         binding.appearanceGroup.check(if (glass) R.id.appearance_glass else R.id.appearance_solid)
         binding.appearanceGroup.setOnCheckedChangeListener { _, checkedId ->
-            BatteryStore.setGlass(this, checkedId == R.id.appearance_glass)
+            val glass = checkedId == R.id.appearance_glass
+            BatteryStore.setGlass(this, glass)
+            if (glass && !hasWallpaperPermission()) askPermissions()
             EncoWidgetProvider.render(this)
         }
     }
@@ -155,9 +158,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun askPermissions() {
-        permissions.launch(
-            arrayOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.POST_NOTIFICATIONS),
+        val needed = mutableListOf(
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.POST_NOTIFICATIONS,
         )
+        if (BatteryStore.glass(this) && !hasWallpaperPermission()) {
+            needed += Manifest.permission.READ_MEDIA_IMAGES
+        }
+        permissions.launch(needed.toTypedArray())
+    }
+
+    private fun hasWallpaperPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) ==
+            PackageManager.PERMISSION_GRANTED
     }
 
     private fun hasBluetoothPermission(): Boolean {

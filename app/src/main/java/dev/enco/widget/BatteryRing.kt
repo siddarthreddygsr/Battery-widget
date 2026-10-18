@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.Rect
 import android.graphics.RectF
 import androidx.core.content.ContextCompat
 import kotlin.math.max
@@ -31,12 +32,17 @@ internal object BatteryRing {
         sizeDp: Float,
         ring: Boolean = true,
         glass: Boolean = false,
+        backdrop: Bitmap? = null,
+        crop: Rect? = null,
     ): Bitmap {
         val night = isNight(context)
         val size = (sizeDp * context.resources.displayMetrics.density).toInt().coerceAtLeast(48)
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        if (backdrop != null && crop != null) {
+            canvas.drawBitmap(backdrop, crop, Rect(0, 0, size, size), paint)
+        }
         val iconColor = if (night) 0xFFF5F5F7.toInt() else 0xFF1A1A1C.toInt()
         val box = when {
             part == WidgetPart.PHONE && ring -> size * 0.40f

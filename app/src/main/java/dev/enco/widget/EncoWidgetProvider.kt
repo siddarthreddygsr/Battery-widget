@@ -11,6 +11,7 @@ open class EncoWidgetProvider : AppWidgetProvider() {
     protected open val defaultStyle: WidgetStyle = WidgetStyle.CIRCLES
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == ACTION_REFRESH) {
+            WidgetRenderer.updateAll(context)
             val pending = goAsync()
             thread(name = "enco-refresh", isDaemon = true) {
                 try {

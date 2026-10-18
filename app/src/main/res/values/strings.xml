@@ -19,7 +19,7 @@
     <string name="appearance">Appearance</string>
     <string name="appearance_solid">Solid</string>
     <string name="appearance_glass">Glass</string>
-    <string name="appearance_hint">Glass is translucent, like an iOS widget, so the wallpaper shows through.</string>
+    <string name="appearance_hint">Glass frosts your wallpaper into the card. One UI only does that blur for its own widgets.</string>
     <string name="update_frequency">Update frequency</string>
     <string name="interval_manual">Only when I refresh</string>
     <string name="interval_1">Every minute</string>

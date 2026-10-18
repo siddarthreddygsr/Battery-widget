@@ -7,6 +7,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Rect
 import android.os.Bundle
 import android.util.TypedValue
 import android.widget.RemoteViews
@@ -68,11 +70,25 @@ internal object WidgetRenderer {
         widthDp: Int,
         heightDp: Int,
     ): RemoteViews {
-        return base(context, layout, night, glass, widthDp, heightDp).apply {
-            ring(context, this, R.id.widget_phone_ring, R.id.widget_phone_percent, reading, phone, WidgetPart.PHONE, text, muted, sizeDp, glass)
-            ring(context, this, R.id.widget_left_ring, R.id.widget_left_percent, reading, reading.left, WidgetPart.LEFT, text, muted, sizeDp, glass)
-            ring(context, this, R.id.widget_right_ring, R.id.widget_right_percent, reading, reading.right, WidgetPart.RIGHT, text, muted, sizeDp, glass)
-            ring(context, this, R.id.widget_case_ring, R.id.widget_case_percent, reading, reading.caseLevel, WidgetPart.CASE, text, muted, sizeDp, glass)
+        val plateWidth = if (widthDp > 0) widthDp else 288
+        val plateHeight = if (heightDp > 0) heightDp else 110
+        val plate = if (glass) GlassPlate.create(context, plateWidth, plateHeight, night) else null
+        return base(context, layout, night, glass, plateWidth, plateHeight, plate).apply {
+            val slots = listOf(
+                Triple(R.id.widget_phone_ring, R.id.widget_phone_percent, WidgetPart.PHONE to phone),
+                Triple(R.id.widget_left_ring, R.id.widget_left_percent, WidgetPart.LEFT to reading.left),
+                Triple(R.id.widget_right_ring, R.id.widget_right_percent, WidgetPart.RIGHT to reading.right),
+                Triple(R.id.widget_case_ring, R.id.widget_case_percent, WidgetPart.CASE to reading.caseLevel),
+            )
+            slots.forEachIndexed { index, (ringId, percentId, partLevel) ->
+                val (part, level) = partLevel
+                val crop = if (plate != null && layout != R.layout.widget_compact) {
+                    columnCrop(plate, index, plateWidth, plateHeight, sizeDp)
+                } else {
+                    null
+                }
+                ring(context, this, ringId, percentId, reading, level, part, text, muted, sizeDp, glass, plate, crop)
+            }
         }
     }
 
@@ -109,22 +125,25 @@ internal object WidgetRenderer {
         glass: Boolean,
         widthDp: Int,
         heightDp: Int,
+        plate: Bitmap? = null,
     ): RemoteViews {
-        val background = if (night) R.drawable.widget_bg_dark else R.drawable.widget_bg_light
         return RemoteViews(context.packageName, layout).apply {
+            setViewOutlinePreferredRadiusDimen(
+                android.R.id.background,
+                android.R.dimen.system_app_widget_background_radius,
+            )
+            setBoolean(android.R.id.background, "setClipToOutline", true)
             if (glass) {
-                val plateWidth = if (widthDp > 0) widthDp else 320
-                val plateHeight = if (heightDp > 0) heightDp else 110
-                setInt(R.id.widget_root, "setBackgroundColor", 0)
+                val frost = plate ?: GlassPlate.create(context, widthDp, heightDp, night)
+                setInt(android.R.id.background, "setBackgroundColor", 0)
                 setViewVisibility(R.id.widget_blur, android.view.View.VISIBLE)
-                setViewLayoutWidth(R.id.widget_blur, plateWidth.toFloat(), TypedValue.COMPLEX_UNIT_DIP)
-                setViewLayoutHeight(R.id.widget_blur, plateHeight.toFloat(), TypedValue.COMPLEX_UNIT_DIP)
-                setImageViewBitmap(R.id.widget_blur, GlassPlate.create(context, plateWidth, plateHeight, night))
+                setImageViewBitmap(R.id.widget_blur, frost)
             } else {
-                setInt(R.id.widget_root, "setBackgroundResource", background)
+                val background = if (night) R.drawable.widget_bg_dark else R.drawable.widget_bg_light
                 setViewVisibility(R.id.widget_blur, android.view.View.GONE)
+                setInt(android.R.id.background, "setBackgroundResource", background)
             }
-            setOnClickPendingIntent(R.id.widget_root, openApp(context))
+            setOnClickPendingIntent(android.R.id.background, openApp(context))
         }
     }
 
@@ -140,10 +159,16 @@ internal object WidgetRenderer {
         muted: Int,
         sizeDp: Float,
         glass: Boolean,
+        backdrop: Bitmap? = null,
+        crop: Rect? = null,
     ) {
         views.setViewLayoutWidth(ringId, sizeDp, TypedValue.COMPLEX_UNIT_DIP)
         views.setViewLayoutHeight(ringId, sizeDp, TypedValue.COMPLEX_UNIT_DIP)
-        views.setImageViewBitmap(ringId, BatteryRing.create(context, level, part, sizeDp, glass = glass))
+        views.setInt(ringId, "setBackgroundColor", 0)
+        views.setImageViewBitmap(
+            ringId,
+            BatteryRing.create(context, level, part, sizeDp, glass = glass, backdrop = backdrop, crop = crop),
+        )
         views.setTextViewText(percentId, ringLabel(context, reading, level, part))
         views.setTextColor(percentId, if (level == null && part != WidgetPart.PHONE) muted else text)
     }
@@ -229,6 +254,23 @@ internal object WidgetRenderer {
     private fun isNight(context: Context): Boolean {
         val mode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
         return mode == Configuration.UI_MODE_NIGHT_YES
+    }
+
+    private fun columnCrop(plate: Bitmap, index: Int, widthDp: Int, heightDp: Int, sizeDp: Float): Rect {
+        val pad = 4f
+        val label = 18f
+        val innerW = widthDp - pad * 2
+        val innerH = heightDp - pad * 2
+        val column = innerW / 4f
+        val topDp = pad + (innerH - sizeDp - label) / 2f
+        val leftDp = pad + index * column + (column - sizeDp) / 2f
+        fun x(dp: Float) = (dp / widthDp * plate.width).toInt()
+        fun y(dp: Float) = (dp / heightDp * plate.height).toInt()
+        val left = x(leftDp).coerceIn(0, plate.width - 1)
+        val top = y(topDp).coerceIn(0, plate.height - 1)
+        val right = x(leftDp + sizeDp).coerceIn(left + 1, plate.width)
+        val bottom = y(topDp + sizeDp).coerceIn(top + 1, plate.height)
+        return Rect(left, top, right, bottom)
     }
 
     private fun openApp(context: Context): PendingIntent {
