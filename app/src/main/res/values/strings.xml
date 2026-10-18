@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Enco Battery</string>
+    <string name="widget_title">Enco Buds</string>
+    <string name="widget_circles">Circles</string>
+    <string name="widget_wide">Wide</string>
+    <string name="widget_compact">Compact</string>
+    <string name="widget_list">List</string>
+    <string name="widget_circles_desc">Three battery rings, like the One UI circles widget</string>
+    <string name="widget_wide_desc">A short row of battery rings</string>
+    <string name="widget_compact_desc">A narrow stack of battery rings</string>
+    <string name="widget_list_desc">Left, right, and case with battery bars</string>
+    <string name="phone">Phone</string>
+    <string name="left">Left</string>
+    <string name="right">Right</string>
+    <string name="case_label">Case</string>
+    <string name="refresh">Refresh</string>
+    <string name="keep_updating">Keep updating</string>
+    <string name="appearance">Appearance</string>
+    <string name="appearance_solid">Solid</string>
+    <string name="appearance_glass">Glass</string>
+    <string name="appearance_hint">Glass is translucent, like an iOS widget, so the wallpaper shows through.</string>
+    <string name="update_frequency">Update frequency</string>
+    <string name="interval_manual">Only when I refresh</string>
+    <string name="interval_1">Every minute</string>
+    <string name="interval_5">Every 5 minutes</string>
+    <string name="interval_15">Every 15 minutes</string>
+    <string name="interval_30">Every 30 minutes</string>
+    <string name="interval_hint">A timed choice keeps checking in the background and shows a small notification.</string>
+    <string name="off">Off</string>
+    <string name="hint">Close HeyMelody if a refresh fails. The buds answer one app at a time.</string>
+    <string name="checking">Checking…</string>
+    <string name="tap_refresh">Tap refresh</string>
+    <string name="not_connected">Not connected</string>
+    <string name="permission_needed">Allow Bluetooth to read the buds</string>
+    <string name="bluetooth_off">Bluetooth is off</string>
+    <string name="no_device">No paired Enco Buds</string>
+    <string name="no_answer">Buds did not answer</string>
+    <string name="could_not_refresh">Could not refresh</string>
+    <string name="charging">Charging</string>
+    <string name="updated">Updated %1$s</string>
+    <string name="channel_name">Enco battery</string>
+    <string name="background_blocked">Background updates were blocked</string>
+</resources>

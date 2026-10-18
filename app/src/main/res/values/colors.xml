@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="card">#F3F4F6</color>
+    <color name="card_text">#111418</color>
+    <color name="muted">#5C6570</color>
+    <color name="icon_background">#14352C</color>
+</resources>
