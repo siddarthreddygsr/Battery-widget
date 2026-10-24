@@ -48,19 +48,20 @@ internal object WidgetRenderer {
         val muted = if (night) 0xFFB8B8C0.toInt() else 0xFF5C5C66.toInt()
         val (width, height) = span(context, options)
         val style = styleFor(width, height, fallback)
-        val size = ringDp(style, width, height)
+        val slots = ringSlots(reading, phone)
+        val visible = slots.count { it.visible }
+        val size = ringDp(style, width, height, visible.coerceAtLeast(1))
         return when (style) {
-            WidgetStyle.LIST -> list(context, reading, phone, night, glass, text, muted, size, width, height)
-            WidgetStyle.COMPACT -> rings(context, reading, phone, night, glass, text, muted, R.layout.widget_compact, size, width, height)
-            WidgetStyle.WIDE -> rings(context, reading, phone, night, glass, text, muted, R.layout.widget_wide, size, width, height)
-            WidgetStyle.CIRCLES -> rings(context, reading, phone, night, glass, text, muted, R.layout.widget_enco, size, width, height)
+            WidgetStyle.LIST -> list(context, reading, night, glass, text, muted, size, width, height)
+            WidgetStyle.COMPACT -> rings(context, reading, night, glass, text, muted, R.layout.widget_compact, size, width, height, slots)
+            WidgetStyle.WIDE -> rings(context, reading, night, glass, text, muted, R.layout.widget_wide, size, width, height, slots)
+            WidgetStyle.CIRCLES -> rings(context, reading, night, glass, text, muted, R.layout.widget_enco, size, width, height, slots)
         }
     }
 
     private fun rings(
         context: Context,
         reading: Reading,
-        phone: Level?,
         night: Boolean,
         glass: Boolean,
         text: Int,
@@ -69,25 +70,27 @@ internal object WidgetRenderer {
         sizeDp: Float,
         widthDp: Int,
         heightDp: Int,
+        slots: List<RingSlot>,
     ): RemoteViews {
         val plateWidth = if (widthDp > 0) widthDp else 288
         val plateHeight = if (heightDp > 0) heightDp else 110
         val plate = if (glass) GlassPlate.create(context, plateWidth, plateHeight, night) else null
+        val columns = slots.count { it.visible }.coerceAtLeast(1)
         return base(context, layout, night, glass, plateWidth, plateHeight, plate).apply {
-            val slots = listOf(
-                Triple(R.id.widget_phone_ring, R.id.widget_phone_percent, WidgetPart.PHONE to phone),
-                Triple(R.id.widget_left_ring, R.id.widget_left_percent, WidgetPart.LEFT to reading.left),
-                Triple(R.id.widget_right_ring, R.id.widget_right_percent, WidgetPart.RIGHT to reading.right),
-                Triple(R.id.widget_case_ring, R.id.widget_case_percent, WidgetPart.CASE to reading.caseLevel),
-            )
-            slots.forEachIndexed { index, (ringId, percentId, partLevel) ->
-                val (part, level) = partLevel
+            var column = 0
+            for (slot in slots) {
+                setViewVisibility(
+                    slot.slotId,
+                    if (slot.visible) android.view.View.VISIBLE else android.view.View.GONE,
+                )
+                if (!slot.visible) continue
                 val crop = if (plate != null && layout != R.layout.widget_compact) {
-                    columnCrop(plate, index, plateWidth, plateHeight, sizeDp)
+                    columnCrop(plate, column, columns, plateWidth, plateHeight, sizeDp)
                 } else {
                     null
                 }
-                ring(context, this, ringId, percentId, reading, level, part, text, muted, sizeDp, glass, plate, crop)
+                ring(context, this, slot.ringId, slot.percentId, reading, slot.level, slot.part, text, muted, sizeDp, glass, plate, crop)
+                column += 1
             }
         }
     }
@@ -95,7 +98,6 @@ internal object WidgetRenderer {
     private fun list(
         context: Context,
         reading: Reading,
-        phone: Level?,
         night: Boolean,
         glass: Boolean,
         text: Int,
@@ -110,11 +112,25 @@ internal object WidgetRenderer {
             night -> 0xFF3A3A40.toInt()
             else -> 0xFFE6E6EB.toInt()
         }
+        val phone = PhoneBattery.read(context)
+        val rows = listOf(
+            ListSlot(R.id.widget_phone_slot, R.id.widget_phone_icon, R.id.widget_phone_name, R.id.widget_phone_bar, R.id.widget_phone_percent, WidgetPart.PHONE, phone),
+            ListSlot(R.id.widget_left_slot, R.id.widget_left_icon, R.id.widget_left_name, R.id.widget_left_bar, R.id.widget_left_percent, WidgetPart.LEFT, reading.left),
+            ListSlot(R.id.widget_right_slot, R.id.widget_right_icon, R.id.widget_right_name, R.id.widget_right_bar, R.id.widget_right_percent, WidgetPart.RIGHT, reading.right),
+            ListSlot(R.id.widget_case_slot, R.id.widget_case_icon, R.id.widget_case_name, R.id.widget_case_bar, R.id.widget_case_percent, WidgetPart.CASE, reading.caseLevel),
+        )
         return base(context, R.layout.widget_list, night, glass, widthDp, heightDp).apply {
-            row(context, this, R.id.widget_phone_icon, R.id.widget_phone_name, R.id.widget_phone_bar, R.id.widget_phone_percent, reading, phone, WidgetPart.PHONE, text, muted, track, iconDp, glass)
-            row(context, this, R.id.widget_left_icon, R.id.widget_left_name, R.id.widget_left_bar, R.id.widget_left_percent, reading, reading.left, WidgetPart.LEFT, text, muted, track, iconDp, glass)
-            row(context, this, R.id.widget_right_icon, R.id.widget_right_name, R.id.widget_right_bar, R.id.widget_right_percent, reading, reading.right, WidgetPart.RIGHT, text, muted, track, iconDp, glass)
-            row(context, this, R.id.widget_case_icon, R.id.widget_case_name, R.id.widget_case_bar, R.id.widget_case_percent, reading, reading.caseLevel, WidgetPart.CASE, text, muted, track, iconDp, glass)
+            for (slot in rows) {
+                setViewVisibility(
+                    slot.slotId,
+                    if (slot.visible) android.view.View.VISIBLE else android.view.View.GONE,
+                )
+                if (!slot.visible) continue
+                row(
+                    context, this, slot.iconId, slot.nameId, slot.barId, slot.percentId,
+                    reading, slot.level, slot.part, text, muted, track, iconDp, glass,
+                )
+            }
         }
     }
 
@@ -143,7 +159,7 @@ internal object WidgetRenderer {
                 setViewVisibility(R.id.widget_blur, android.view.View.GONE)
                 setInt(android.R.id.background, "setBackgroundResource", background)
             }
-            setOnClickPendingIntent(android.R.id.background, openApp(context))
+            setOnClickPendingIntent(android.R.id.background, refresh(context))
         }
     }
 
@@ -202,16 +218,21 @@ internal object WidgetRenderer {
 
     private fun ringLabel(context: Context, reading: Reading, level: Level?, part: WidgetPart): String {
         if (part == WidgetPart.PHONE) return level?.percent?.toString() ?: "—"
-        return when {
-            level != null -> level.percent.toString()
-            reading.known -> context.getString(R.string.off)
-            else -> "—"
-        }
+        return level?.percent?.toString() ?: "—"
     }
 
     private fun listLabel(context: Context, reading: Reading, level: Level?, part: WidgetPart): String {
         val number = ringLabel(context, reading, level, part)
         return if (level != null) "$number%" else number
+    }
+
+    private fun ringSlots(reading: Reading, phone: Level?): List<RingSlot> {
+        return listOf(
+            RingSlot(R.id.widget_phone_slot, R.id.widget_phone_ring, R.id.widget_phone_percent, WidgetPart.PHONE, phone),
+            RingSlot(R.id.widget_left_slot, R.id.widget_left_ring, R.id.widget_left_percent, WidgetPart.LEFT, reading.left),
+            RingSlot(R.id.widget_right_slot, R.id.widget_right_ring, R.id.widget_right_percent, WidgetPart.RIGHT, reading.right),
+            RingSlot(R.id.widget_case_slot, R.id.widget_case_ring, R.id.widget_case_percent, WidgetPart.CASE, reading.caseLevel),
+        )
     }
 
     private fun span(context: Context, options: Bundle): Pair<Int, Int> {
@@ -225,7 +246,8 @@ internal object WidgetRenderer {
         return width to height
     }
 
-    private fun ringDp(style: WidgetStyle, width: Int, height: Int): Float {
+    private fun ringDp(style: WidgetStyle, width: Int, height: Int, count: Int): Float {
+        val columns = count.coerceAtLeast(1).toFloat()
         if (width <= 0 || height <= 0) {
             return when (style) {
                 WidgetStyle.CIRCLES -> 72f
@@ -235,9 +257,9 @@ internal object WidgetRenderer {
             }
         }
         return when (style) {
-            WidgetStyle.CIRCLES, WidgetStyle.WIDE -> min((width - 16f) / 4f, height - 46f).coerceIn(32f, 140f)
-            WidgetStyle.COMPACT -> min((height - 8f) / 4f, width * 0.46f).coerceIn(28f, 80f)
-            WidgetStyle.LIST -> ((height - 12f) / 4f * 0.72f).coerceIn(22f, 48f)
+            WidgetStyle.CIRCLES, WidgetStyle.WIDE -> min((width - 16f) / columns, height - 46f).coerceIn(32f, 140f)
+            WidgetStyle.COMPACT -> min((height - 8f) / columns, width * 0.46f).coerceIn(28f, 80f)
+            WidgetStyle.LIST -> ((height - 12f) / columns * 0.72f).coerceIn(22f, 48f)
         }
     }
 
@@ -256,12 +278,19 @@ internal object WidgetRenderer {
         return mode == Configuration.UI_MODE_NIGHT_YES
     }
 
-    private fun columnCrop(plate: Bitmap, index: Int, widthDp: Int, heightDp: Int, sizeDp: Float): Rect {
+    private fun columnCrop(
+        plate: Bitmap,
+        index: Int,
+        columns: Int,
+        widthDp: Int,
+        heightDp: Int,
+        sizeDp: Float,
+    ): Rect {
         val pad = 4f
         val label = 18f
         val innerW = widthDp - pad * 2
         val innerH = heightDp - pad * 2
-        val column = innerW / 4f
+        val column = innerW / columns.coerceAtLeast(1).toFloat()
         val topDp = pad + (innerH - sizeDp - label) / 2f
         val leftDp = pad + index * column + (column - sizeDp) / 2f
         fun x(dp: Float) = (dp / widthDp * plate.width).toInt()
@@ -273,12 +302,34 @@ internal object WidgetRenderer {
         return Rect(left, top, right, bottom)
     }
 
-    private fun openApp(context: Context): PendingIntent {
-        return PendingIntent.getActivity(
+    private fun refresh(context: Context): PendingIntent {
+        return PendingIntent.getBroadcast(
             context,
             1,
-            Intent(context, MainActivity::class.java),
+            Intent(context, EncoWidgetProvider::class.java).setAction(EncoWidgetProvider.ACTION_REFRESH),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+    }
+
+    private data class RingSlot(
+        val slotId: Int,
+        val ringId: Int,
+        val percentId: Int,
+        val part: WidgetPart,
+        val level: Level?,
+    ) {
+        val visible: Boolean get() = level != null
+    }
+
+    private data class ListSlot(
+        val slotId: Int,
+        val iconId: Int,
+        val nameId: Int,
+        val barId: Int,
+        val percentId: Int,
+        val part: WidgetPart,
+        val level: Level?,
+    ) {
+        val visible: Boolean get() = level != null
     }
 }

@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
+import android.os.Build
 import androidx.core.content.ContextCompat
 import kotlin.math.max
 
@@ -42,9 +43,10 @@ internal object BatteryRing {
             canvas.drawBitmap(backdrop, crop, Rect(0, 0, size, size), paint)
         }
         val iconColor = if (night) 0xFFF5F5F7.toInt() else 0xFF1A1A1C.toInt()
+        val phoneScale = if (part == WidgetPart.PHONE && isS21Fe()) 1.75f else 1f
         val box = when {
-            part == WidgetPart.PHONE && ring -> size * 0.40f
-            part == WidgetPart.PHONE -> size * 0.72f
+            part == WidgetPart.PHONE && ring -> size * 0.40f * phoneScale
+            part == WidgetPart.PHONE -> size * 0.72f * phoneScale
             !ring -> size * 0.92f
             part == WidgetPart.CASE -> size * 0.74f
             else -> size * 0.64f
@@ -95,8 +97,14 @@ internal object BatteryRing {
             WidgetPart.LEFT -> R.drawable.ic_bud_left
             WidgetPart.RIGHT -> R.drawable.ic_bud_right
             WidgetPart.CASE -> R.drawable.ic_case
-            WidgetPart.PHONE -> 0
+            WidgetPart.PHONE -> if (isS21Fe()) R.drawable.ic_phone_s21_fe else 0
         }
+    }
+
+    private fun isS21Fe(): Boolean {
+        val model = Build.MODEL.uppercase()
+        val device = Build.DEVICE.lowercase()
+        return model.startsWith("SM-G990") || device.startsWith("r9q")
     }
 
     private fun drawMark(
@@ -108,11 +116,12 @@ internal object BatteryRing {
         part: WidgetPart,
         color: Int,
     ) {
-        if (part == WidgetPart.PHONE) {
+        val art = artwork(part)
+        if (part == WidgetPart.PHONE && art == 0) {
             drawPhoneGlyph(canvas, cx, cy, box, color)
             return
         }
-        val drawable = ContextCompat.getDrawable(context, artwork(part))?.mutate() ?: return
+        val drawable = ContextCompat.getDrawable(context, art)?.mutate() ?: return
         val width = drawable.intrinsicWidth.toFloat().coerceAtLeast(1f)
         val height = drawable.intrinsicHeight.toFloat().coerceAtLeast(1f)
         val scale = box / max(width, height)

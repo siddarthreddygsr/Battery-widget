@@ -1,6 +1,7 @@
 package dev.enco.widget
 
 import android.Manifest
+import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -31,6 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        acceptWidgetConfigure()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.refreshButton.setOnClickListener {
@@ -41,6 +43,18 @@ class MainActivity : AppCompatActivity() {
         binding.intervalGroup.setOnCheckedChangeListener { _, checkedId ->
             onIntervalSelected(checkedId)
         }
+    }
+
+    private fun acceptWidgetConfigure() {
+        val widgetId = intent.getIntExtra(
+            AppWidgetManager.EXTRA_APPWIDGET_ID,
+            AppWidgetManager.INVALID_APPWIDGET_ID,
+        )
+        if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        setResult(
+            RESULT_OK,
+            Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId),
+        )
     }
 
     override fun onResume() {

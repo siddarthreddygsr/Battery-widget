@@ -22,6 +22,7 @@
         android:paddingBottom="4dp">
 
     <LinearLayout
+        android:id="@+id/widget_phone_slot"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
@@ -49,6 +50,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/widget_left_slot"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
@@ -76,6 +78,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/widget_right_slot"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
@@ -103,6 +106,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/widget_case_slot"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
